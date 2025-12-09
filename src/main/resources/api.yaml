@@ -1,0 +1,1066 @@
+openapi: 3.0.4
+info:
+  title: Houstonlinux doorbell
+  description: |-
+    This is a door bell system  for the HoustonLinux User Group.  You can find out more
+    about the Houston Linux User Group at [https://houstonlinux.org/](https://houstonlinux.org).  
+
+    This door bell uses URL requests to notify door marshalls to open a door when a member requests entry.  Features include:
+
+      * Support for multiple doors
+      * Support for multiple door marhshalls
+      * Door opening requests handled only during meetings
+          * Support for pre and post meeting buffers
+      * Requester notification of the Door Marshall commitment to open a door
+          * Suppression of Requestor spamming
+          * Requestor notification of Door Marshall inaction
+      * Uninvolved Door Marshall notification of Door Marshall commitment
+
+    Some useful links:
+    - [The Houston Linux User Group](https://houstonlinux.org)
+    - [The Houston Linux User Group Doorbell](https://github.com/edwbuck/hlug-doorbell)
+    - [The source API definition for the Houston Linux User Group Doorbell](https://github.com/edwbuck/doorbell/blob/master/src/main/resources/openapi.yaml)
+  termsOfService: https://houstonlinux.org/terms/
+  contact:
+    email: edwbuck@gmail.com
+  license:
+    name: Copyright 2025, Edwin Buck.  All rights reserved.
+  version: 0.1.1
+externalDocs:
+  description: Find out more about the doorbell project
+  url: https://github.com/edwbuck/hlug-doorbell
+servers:
+  - url: https://doorbell.houstonlinux.org/v0.1.1
+    description:  Production deployment
+  - url: https://qa-doorbell.houstonlinux.org/v0.1.1
+    description: Quality Assurance deployment
+  - url: https://dev-doorbell.houstonlinux.org/v0.1.1
+    description: Development deployment
+tags:
+  - name: door
+    description: Doors that need opened
+  - name: event
+    description: A meeting behind closed doors
+  - name: marshal
+    description: People who open doors
+  - name: request
+    description: A request that a door should be opened
+  - name: user
+    description: Someone or something that requested a door be opened
+paths:
+  /door:
+    get:
+      tags:
+        - door
+      summary: Fetch a list of door ids.
+      description: Get defined door ids.
+      operationId: getDoors
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Door'
+    post:
+      tags:
+        - door
+      summary: Add a new door to the doorbell.
+      description: Add a new door to the doorbell
+      operationId: addPet
+      requestBody:
+        description: Create a new door in the doorbell
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Door'
+          application/xml:
+            schema:
+              $ref: '#/components/schemas/Door'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Door'
+        required: true
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Door'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/Door'
+        '400':
+          description: Invalid input
+        '422':
+          description: Validation exception
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - doorbell_auth:
+            - write:doorbell_doors
+  /door/{doorId}:
+    get:
+      tags:
+        - door
+      summary: Get a Door by {doorId}.
+      description: Multiple status values can be provided with comma separated strings.
+      operationId: findPetsByStatus
+      parameters:
+        - name: doorId
+          in: path
+          description: Door id to delete
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Door'
+            application/xml:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Door'
+        '400':
+          description: Invalid status value
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - doorbell_auth:
+            - write:doorbell_doors
+    put:
+      tags:
+        - door
+      summary: Update an existing door.
+      description: Update an existing door by Id.
+      operationId: updateDoor
+      parameters:
+        - name: doorId
+          in: path
+          description: Door id to delete
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        description: Update an existent pet in the store
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Door'
+          application/xml:
+            schema:
+              $ref: '#/components/schemas/Door'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Door'
+        required: true
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Door'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/Door'
+        '400':
+          description: Invalid ID supplied
+        '404':
+          description: door not found
+        '422':
+          description: Validation exception
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - doorbell_auth:
+            - write:doors
+            - read:doors
+    delete:
+      tags:
+        - door
+      summary: Deletes a door by {doorId}
+      description: Delete a Door.
+      operationId: deleteDoor
+      parameters:
+        - name: api_key
+          in: header
+          description: ''
+          required: false
+          schema:
+            type: string
+        - name: doorId
+          in: path
+          description: Door id to delete
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Doorbell deleted
+        '400':
+          description: Invalid door value
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - doorbell_auth:
+            - write:doors
+            - read:doors
+  /event:
+    get:
+      tags:
+        - event
+      summary: Fetch a list of Event ids.
+      description: Multiple tags can be provided with comma separated strings. Use tag1, tag2, tag3 for testing.
+      operationId: findPetsByTags
+      parameters:
+        - name: tags
+          in: query
+          description: Tags to filter by
+          required: false
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Event'
+            application/xml:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Event'
+        '400':
+          description: Invalid tag value
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - doorbell_auth:
+            - write:doorbell_events
+    post:
+      tags:
+        - event
+      summary: Updates an event in the doorbell with form data.
+      description: Updates an event based on the form data.
+      operationId: updateEventWithForm
+      parameters:
+        - name: name
+          in: query
+          description: Name of Event that needs to be updated
+          schema:
+            type: string
+        - name: status
+          in: query
+          description: Status of Event that needs to be updated
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '400':
+          description: Invalid input
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - doorbell_auth:
+            - write:pets
+  /event/{eventId}:
+    get:
+      tags:
+        - event
+      summary: Find Event by ID.
+      description: Returns a single Event.
+      operationId: getEventById
+      parameters:
+        - name: eventId
+          in: path
+          description: ID of Event to return
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '400':
+          description: Invalid ID supplied
+        '404':
+          description: Pet not found
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - api_key: []
+        - doorbell_auth:
+            - write:pets
+    put:
+      tags:
+        - event
+      summary: Update an existing Event.
+      description: Update an existing Event by Id.
+      operationId: updateEvent
+      parameters:
+        - name: eventId
+          in: path
+          description: ID of Event to return
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        description: Update an existing Event in the doorbell
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Event'
+          application/xml:
+            schema:
+              $ref: '#/components/schemas/Event'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Event'
+        required: true
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Door'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/Door'
+        '400':
+          description: Invalid ID supplied
+        '404':
+          description: door not found
+        '422':
+          description: Validation exception
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - doorbell_auth:
+            - write:doors
+            - read:doors
+    delete:
+      tags:
+        - event
+      summary: Deletes a pet.
+      description: Delete a pet.
+      operationId: deletePet
+      parameters:
+        - name: api_key
+          in: header
+          description: ''
+          required: false
+          schema:
+            type: string
+        - name: eventId
+          in: path
+          description: Event id to delete
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Event deleted
+        '400':
+          description: Invalid Event value
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - doorbell_auth:
+            - write:pets
+  /marshal:
+    get:
+      tags:
+        - marshal
+      summary: Returns pet inventories by status.
+      description: Returns a map of status codes to quantities.
+      operationId: listMarshals
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: integer
+                  format: int32
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - api_key: []
+    post:
+      tags:
+        - marshal
+      summary: Register a new Door Marshal.
+      description: Place a new order in the store.
+      operationId: createMarshal
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Marshal'
+          application/xml:
+            schema:
+              $ref: '#/components/schemas/Marshal'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Marshal'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Marshal'
+        '400':
+          description: Invalid input
+        '422':
+          description: Validation exception
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /marshal/{marshalId}:
+    get:
+      tags:
+        - marshal
+      summary: Find Marshal by ID.
+      description: Returns a single Event.
+      operationId: getMarshalById
+      parameters:
+        - name: marshalId
+          in: path
+          description: ID of Marshal to return
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Marshal'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/Marshal'
+        '400':
+          description: Invalid ID supplied
+        '404':
+          description: Marshal not found
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - api_key: []
+        - doorbell_auth:
+            - write:pets
+    put:
+      tags:
+        - marshal
+      summary: Update a Door Marshal.
+      description: Place a new order in the store.
+      operationId: placeOrder
+      parameters:
+        - name: marshalId
+          in: path
+          description: ID of Marshal to return
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Marshal'
+          application/xml:
+            schema:
+              $ref: '#/components/schemas/Marshal'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Marshal'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Marshal'
+        '400':
+          description: Invalid input
+        '422':
+          description: Validation exception
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      tags:
+        - marshal
+      summary: Deletes a Marshal.
+      description: Delete a Marshal.
+      operationId: deleteMarshal
+      parameters:
+        - name: api_key
+          in: header
+          description: ''
+          required: false
+          schema:
+            type: string
+        - name: marshalId
+          in: path
+          description: Marshal id to delete
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Marshal deleted
+        '400':
+          description: Invalid Marshal value
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - doorbell_auth:
+            - write:pets
+  /request:
+    get:
+      tags:
+        - request
+      summary: Returns pet inventories by status.
+      description: Returns a map of status codes to quantities.
+      operationId: listRequests
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: integer
+                  format: int32
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - api_key: []
+    post:
+      tags:
+        - request
+      summary: Register a new door Request.
+      description: Place a new Request in the doorbell.
+      operationId: createRequest
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Request'
+          application/xml:
+            schema:
+              $ref: '#/components/schemas/Request'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Request'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Request'
+        '400':
+          description: Invalid input
+        '422':
+          description: Validation exception
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /request/{requestId}:
+    get:
+      tags:
+        - request
+      summary: Find a Request by ID.
+      description: Returns a single Request.
+      operationId: getRequestById
+      parameters:
+        - name: requestId
+          in: path
+          description: ID of Request to return
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Marshal'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/Marshal'
+        '400':
+          description: Invalid ID supplied
+        '404':
+          description: Marshal not found
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - api_key: []
+        - doorbell_auth:
+            - write:pets
+  /request/{requestId}/cancel:
+    get:
+      tags:
+        - request
+      summary: Logs user into the system.
+      description: Log into the system.
+      operationId: loginUser
+      parameters:
+        - name: requestId
+          in: path
+          description: ID of Request to return
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: password
+          in: query
+          description: The password for login in clear text
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          headers:
+            X-Rate-Limit:
+              description: calls per hour allowed by the user
+              schema:
+                type: integer
+                format: int32
+            X-Expires-After:
+              description: date in UTC when token expires
+              schema:
+                type: string
+                format: date-time
+          content:
+            application/xml:
+              schema:
+                type: string
+            application/json:
+              schema:
+                type: string
+        '400':
+          description: Invalid username/password supplied
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /user:
+    get:
+      tags:
+        - user
+      summary: Returns user of the doorbell system.
+      description: Returns a map of status codes to quantities.
+      operationId: getUsers
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: integer
+                  format: int32
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - api_key: []
+    post:
+      tags:
+        - user
+      summary: Create user.
+      description: This can only be done by the logged in user.
+      operationId: createUser
+      requestBody:
+        description: Created user object
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+          application/xml:
+            schema:
+              $ref: '#/components/schemas/User'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/User'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/User'
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /user/{userId}:
+    get:
+      tags:
+        - user
+      summary: Get user by user name.
+      description: Get user detail based on userId.
+      operationId: getUserByName
+      parameters:
+        - name: userId
+          in: path
+          description: The name that needs to be fetched. Use user1 for testing
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Invalid userId supplied
+        '404':
+          description: User not found
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    put:
+      tags:
+        - user
+      summary: Update user resource.
+      description: This can only be done by the logged in user.
+      operationId: updateUser
+      parameters:
+        - name: userId
+          in: path
+          description: name that need to be deleted
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: Update an existent user in the store
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+          application/xml:
+            schema:
+              $ref: '#/components/schemas/User'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/User'
+      responses:
+        '200':
+          description: successful operation
+        '400':
+          description: bad request
+        '404':
+          description: user not found
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      tags:
+        - user
+      summary: Delete user resource.
+      description: This can only be done by the logged in user.
+      operationId: deleteUser
+      parameters:
+        - name: userId
+          in: path
+          description: The name that needs to be deleted
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User deleted
+        '400':
+          description: Invalid userId supplied
+        '404':
+          description: User not found
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+components:
+  schemas:
+    Door:
+      required:
+        - name
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: '678418d9-eb21-451f-a51d-a249ff8fa7ff'
+        name:
+          type: string
+          example: stairwell
+        status:
+          type: string
+          description: door status in the doorbell
+          enum:
+            - enabled
+            - disabled
+    Event:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 198772
+        name:
+          type: string
+          example: Tuesday Meeting
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+        status:
+          type: string
+          description: Event Status
+          example: approved
+          enum:
+            - planned
+            - active
+            - cancelled
+        complete:
+          type: boolean
+      xml:
+        name: order
+    Marshal:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 1
+        name:
+          type: string
+          example: Edwin Buck
+      xml:
+        name: marshal
+    Request:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 3
+        name:
+          type: string
+      xml:
+        name: request
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 10
+        username:
+          type: string
+          example: theUser
+        firstName:
+          type: string
+          example: John
+        lastName:
+          type: string
+          example: James
+        email:
+          type: string
+          example: john@email.com
+        password:
+          type: string
+          example: '12345'
+        phone:
+          type: string
+          example: '12345'
+        userStatus:
+          type: integer
+          description: User Status
+          format: int32
+          example: 1
+      xml:
+        name: user
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+      required:
+        - code
+        - message
+  requestBodies:
+    doorId:
+      description: Pet object that needs to be added to the store
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Door'
+        application/xml:
+          schema:
+            $ref: '#/components/schemas/Door'
+    DoorArray:
+      description: List of Door objects
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/Door'
+  securitySchemes:
+    doorbell_auth:
+      type: oauth2
+      flows:
+        implicit:
+          authorizationUrl: https://oauth.houstonlinux.org/
+          scopes:
+            "write:doorbell_doors": modify doors in the doorbell
+            "write:doorbell_marshals": modify marshals in the doorbell
+            "read:doorbell_marshals": read marshals in the doorbell
+    api_key:
+      type: apiKey
+      name: api_key
+      in: header
